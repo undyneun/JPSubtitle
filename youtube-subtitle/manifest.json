@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "JP Subtitle",
+  "version": "1.0",
+  "description": "Youtube上提供日中雙語字幕",
+  "permissions": ["activeTab", "scripting", "windows", "tabs", "webNavigation"],
+  "host_permissions": ["*://www.youtube.com/watch*" ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "styles.css",
+        "icons/text-to-speech.svg",
+        "icons/reset.svg",
+        "icons/translate.svg",
+        "icons/close.svg"
+      ],
+      "matches": ["*://www.youtube.com/*"]
+    }
+  ]
+}

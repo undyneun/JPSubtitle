@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Layout Splitter</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      width: 200px;
+      margin: 0 auto;
+      padding: 0px 15px 15px 15px;
+      border-radius: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      font-size: 20px;
+      text-align: center;
+    }
+
+    label {
+      font-size: 14px;
+      margin-bottom: 5px;
+      display: block;
+      color: #555;
+    }
+
+    input[type="password"], input[type="file"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      background-color: #007BFF;
+      color: white;
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    #splitButton {
+      background-color: #28a745;
+    }
+
+    #splitButton:hover {
+      background-color: #218838;
+    }
+
+    #notEffective {
+      display: none;
+      color: red;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>JPSubtitle</h1>
+  <button id="splitButton">分割影片和字幕</button>
+  <p>
+    <label for="subtitleFile">選擇字幕檔案</label>
+    <input type="file" id="subtitleFile" accept=".txt,.srt,.vtt">
+  </p>
+  <p>
+    <label for="apiKey">OpenAI API Key</label>
+    <input type="password" id="apiKey" placeholder="請輸入您的 API Key">
+  </p>
+  <button id="submit">送出</button>
+  <p id="notEffective">目前不在影片頁面</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
