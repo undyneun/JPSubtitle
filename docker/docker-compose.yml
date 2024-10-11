@@ -6,3 +6,4 @@ services:
       - "8080:8080"
     volumes:
       - ./cache:/app/cache
+      - ./mecab-ipadic-neologd:/app/mecab-ipadic-neologd

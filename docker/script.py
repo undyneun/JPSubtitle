@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from pyModule import mecabMod, openaiMod, crawlerMod, pytubeMod, whisperjaxModJson
+from pyModule import mecabMod, openaiMod, crawlerMod, pytubeMod, whisperjaxMod
 import os
 
 app = Flask(__name__)
@@ -15,8 +15,9 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/crawler', methods=['POST'])
 def crawler():
-    normalForm = request.form['normalForm']
-    origin = request.form['origin']
+    origin = normalForm = None
+    if 'normalForm' in request.form:  normalForm = request.form['normalForm']
+    if 'origin' in request.form:  origin = request.form['origin']
     result, hasMeaning = crawlerMod.main(origin, normalForm)
     return jsonify({"result": result, "hasMeaning": hasMeaning}) 
 
@@ -44,8 +45,8 @@ def transcribe_audio():
     # if len(api_key) > 100:
     #     text = openaiMod.whisper(audioPath, apiKey)
     # else:
-    #     text = whisperjaxModJson.getResult(audioPath)
-    result = whisperjaxModJson.getResult(audioPath)
+    #     text = whisperjaxMod.getResult(audioPath)
+    result = whisperjaxMod.getResult(audioPath)
     os.remove(audioPath)
     return jsonify(result)
 

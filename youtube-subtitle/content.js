@@ -1,7 +1,9 @@
 console.log("JPsubtitle已加載");
 
+var serverIP;
 var count;
-var nowVocab = '', jaOrZhIdx = 0;
+var resizerY;
+var nowVocab = '';
 var hasMeaning = false;
 var originalText = "", CrawlerJson = {}, subtitleData = [], timestampData = [];
 var isHalfFull, isResizing = false, isDragging = false;
@@ -24,27 +26,23 @@ const handle = {
       await changeMean(CrawlerJson, count-1)
     }
   },
-  pressEsc(e) {
-    if (e.key === 'Escape') { 
-      handle.clickCloseBtn()
-    }
+  pressEsc(e) { 
+    if (e.key === 'Escape') handle.clickCloseBtn() 
   },
   clickWhisperBtn(e) {
     subtitleContainer.removeChild(e.currentTarget)
     withLoader(subtitleContainer, async () => {
       try {
-        const jpJson = await getTranscription(openaiApiKey, window.location.href)
+        const jpJson = await getTranscription(serverIP, openaiApiKey, window.location.href)
         console.log(jpJson);
         if (jpJson[0]["line"] === "error: error") { 
-          console.log("轉錄失敗");
           window.subtitleJson = [[{"origin": "忙碌中，請稍後再試","normalForm": "","kanji_index": "-1","kanji_reading": "none"}]]
         }
         else {
-          console.log("轉錄成功");
           const jpString = jpJson.map(dict => dict["line"]).join("\n")
           jpJson.forEach(dict => timestampData.push({ start: dict["start"], end: dict["end"] }))
           console.log(timestampData);
-          window.subtitleJson = await getParse(jpString)
+          window.subtitleJson = await getParse(serverIP, jpString)
         }
         fillSubtitleContainer();
       } catch (error) {
@@ -69,13 +67,12 @@ const handle = {
     const textDiv = e.currentTarget.querySelector(".JPsubtitle-text")
     const chs = document.querySelectorAll('.JPsubtitle-chinese-subtitle');
     const origs = document.querySelectorAll('.JPsubtitle-original-subtitle');
-    jaOrZhIdx = (jaOrZhIdx + 1) % 3;
-    if (jaOrZhIdx === 0) {
+    if (textDiv.innerText === "中") {
       chs.forEach(ch => { ch.style.fontSize = "15px";  ch.style.color = "rgb(156, 156, 156)" })
       origs.forEach(orig => orig.style.display = "")
       textDiv.innerText = "日中"
     }
-    else if (jaOrZhIdx === 1) {
+    else if (textDiv.innerText === "日中") {
       chs.forEach(ch => ch.style.display = "none")
       textDiv.innerText = "日"
     }
@@ -88,7 +85,7 @@ const handle = {
   async clickTranslateBtn() {
     if (subtitleData.length === 0) {return}
     try {
-      window.translatedText = await getTranslate(openaiApiKey, originalText)
+      window.translatedText = await getTranslate(serverIP, openaiApiKey, originalText)
       fillSubtitleContainer();
     } catch (error) {
       console.error(error)
@@ -96,24 +93,14 @@ const handle = {
   },
   resizeMousemove(e) {
     if (!isResizing) return;
-
-    // 確保滑鼠垂直位置在右邊容器的範圍內
     const containerRect = subtitleCombineContainer.getBoundingClientRect();
     const fnDivRect = functionContainer.getBoundingClientRect();
-    const minY = fnDivRect.height+175;  // 避免上部分過小
-    const maxY = containerRect.height;  // 避免下部分過小
-    
-    // 限制 resizer 的最小和最大位置
-    let resizerY = e.clientY - containerRect.top;
+    const minY = fnDivRect.height+175; 
+    const maxY = containerRect.height; 
+    resizerY = e.clientY - containerRect.top;
     if (resizerY < minY) {resizerY = minY}
     if (resizerY > maxY) {resizerY = maxY}
-
-    // 更新 resizer 位置
-    resizer.style.top = `${resizerY - 5}px`;
-
-    // 調整上、下部分的高度
-    subtitleContainer.style.height = `${resizerY - 5 - (fnDivRect.height)*2 + 15}px`;
-    subtitleSearchContainer.style.height = `${containerRect.height - resizerY - fnDivRect.height + 5}px`;
+    handle.windowResize();
   },
   resizeMouseup() {
     isResizing = false;
@@ -132,8 +119,9 @@ const handle = {
   windowResize() {
     const containerRect = subtitleCombineContainer.getBoundingClientRect();
     const fnDivRect = functionContainer.getBoundingClientRect();
-    const resizerRect = resizer.getBoundingClientRect();
-    subtitleSearchContainer.style.height = `${containerRect.height - resizerRect.height - fnDivRect.height + 5}px`;
+    resizer.style.top = `${resizerY - 5}px`;
+    subtitleContainer.style.height = `${resizerY - 5 - (fnDivRect.height)*2 + 15}px`;
+    subtitleSearchContainer.style.height = `${containerRect.height - resizerY - fnDivRect.height + 5}px`;
   },
   ccMousemove(e) {
     if (!isDragging) { return; }
@@ -217,7 +205,6 @@ document.addEventListener('mousemove', handle.ccMousemove);
 })()
   
 
-
 // 影片
 setTimeout(() => {
   moviePlayerParent = moviePlayer.parentNode
@@ -233,10 +220,9 @@ createFnBtns()
 createWhisperBtn()
 
 // 主函數
-async function applyCustomLayout(apiKey, hasFile, hasTranslate) {
+async function applyCustomLayout(IP, apiKey, hasFile) {
   if (layoutContainer.style.zIndex === 10000) return;
-
-  console.log(hasFile, hasTranslate);
+  serverIP = IP;
   openaiApiKey = apiKey;
   document.addEventListener('keydown', handle.dictChange, true);
   document.addEventListener('keydown', handle.pressEsc);
@@ -245,8 +231,14 @@ async function applyCustomLayout(apiKey, hasFile, hasTranslate) {
 
   if (hasFile) {
     await withLoader(subtitleContainer, async () => {
-      if (!window.subtitleJson) await waitForData("subtitleJson");
-      if (hasTranslate && !window.translatedText) await waitForData("translatedText");
+      if (!window.subtitleJson) await new Promise((resolve, reject) => {
+        let count = 0
+        const checkData = setInterval(() => {
+          if (window[dataName] && window[dataName] !== '') { clearInterval(checkData);  resolve() }
+          if (count >= 50) { clearInterval(checkData); reject() }
+          count++
+        }, 100);
+      });
     });
     fillSubtitleContainer();
   } else {
@@ -272,8 +264,6 @@ function hideContainers() {
   moviePlayerParent.append(moviePlayer)
   setTimeout(() => { ytpSizeBtn.click() }, 100)
   setTimeout(() => { if (isHalfFull) {setTimeout(() => { ytpSizeBtn.click() }, 100)} }, 100)
-  const wDiv = document.getElementById("use-whisper")
-  if (wDiv) {wDiv.remove()}
   document.documentElement.style.overflow = 'auto';
   layoutContainer.style.zIndex = -1
   layoutContainer.style.display = "none"
@@ -396,7 +386,7 @@ async function clickToken (origin, normalForm) {
 
   // Fetch and display dictionary data
   await withLoader(examplesDiv, async () => {
-    [CrawlerJson, hasMeaning] = await getCrawlerjson(origin, normalForm);
+    [CrawlerJson, hasMeaning] = await getCrawlerjson(serverIP, origin, normalForm);
     await changeMean(CrawlerJson, 0);
   });
 };
@@ -408,7 +398,7 @@ async function changeMean(CrawlerJson, index) {
   examplesDiv.replaceChildren()
   
   const jpString = meanDict["examples"].map(exampleDict => exampleDict["jp"]).join('\n');
-  const jpJson = await getParse(jpString)
+  const jpJson = await getParse(serverIP, jpString)
 
   jpJson.forEach((sentenceArray, i) => {
     const exampleWrapper = getDiv('', 'JPsubtitle-token-example-wrapper');
@@ -489,28 +479,27 @@ function createWhisperBtn() {
 }
 
 // API
-async function getTranscription(apiKey, ytUrl) {
+async function getTranscription(serverIP, apiKey, ytUrl) {
   const formData = new FormData();
   formData.append('apiKey', apiKey);
   formData.append('ytUrl', ytUrl);
   try {
-    const response = await fetch('http://localhost:8080/transcribe', {
+    const response = await fetch(`${serverIP}/transcribe`, {
       method: 'POST',  body: formData
     });
     const json = await response.json();
     return json
   } catch (error) {
-    console.log(error);
-    return [{"line":"轉錄時發生錯誤，請再試一次", "start":0, "end":0}]
+    return [{"line":`轉錄錯誤 ${error}`, "start":0, "end":0}]
   }
 }
 
-async function getTranslate(apiKey, jpString) {
+async function getTranslate(serverIP, apiKey, jpString) {
   const formData = new FormData();
   formData.append('apiKey', apiKey);
   formData.append('jpString', jpString);
   try {
-    const response = await fetch('http://localhost:8080/translate', {
+    const response = await fetch(`${serverIP}/translate`, {
       method: 'POST',  body: formData
     });
     const text = await response.text();
@@ -521,12 +510,12 @@ async function getTranslate(apiKey, jpString) {
   }
 }
 
-async function getCrawlerjson(origin, normalForm) {
+async function getCrawlerjson(serverIP, origin, normalForm) {
   const formData = new FormData();
   formData.append('normalForm', normalForm);
   formData.append('origin', origin);
   try {
-    const response = await fetch('http://localhost:8080/crawler', {
+    const response = await fetch(`${serverIP}/crawler`, {
       method: 'POST',  body: formData
     })
     const data = await response.json()
@@ -539,13 +528,13 @@ async function getCrawlerjson(origin, normalForm) {
   }
 }
 
-async function getParse(jpString) {
+async function getParse(serverIP, jpString) {
   if (jpString === '') {return []}
 
   const formData = new FormData();
   formData.append('jpString', jpString);
   try {
-    const response = await fetch('http://localhost:8080/parse', {
+    const response = await fetch(`${serverIP}/parse`, {
       method: 'POST',  body: formData
     });
     const data = await response.json();
@@ -576,34 +565,21 @@ function getDiv(id, className) {
   return div;
 }
 
-const formatTime = (seconds) => {
-  const minutes = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
-  return `${minutes}:${secs}`;
-};
+// const formatTime = (seconds) => {
+//   const minutes = Math.floor(seconds / 60);
+//   const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+//   return `${minutes}:${secs}`;
+// };
 
-function createElement(type, attributes = {}, innerText = '') {
-  const element = document.createElement(type);
-  Object.assign(element, attributes);
-  if (innerText) {element.innerText = innerText;}
-  return element;
-};
+// function createElement(type, attributes = {}, innerText = '') {
+//   const element = document.createElement(type);
+//   Object.assign(element, attributes);
+//   if (innerText) {element.innerText = innerText;}
+//   return element;
+// };
 
 async function waitForData(dataName) {
-  return new Promise((resolve, reject) => {
-    let count = 0
-    const checkData = setInterval(() => {
-      if (window[dataName] && window[dataName] !== '') {
-        clearInterval(checkData);
-        resolve();
-      }
-      if (count >= 20) {
-        clearInterval(checkData);
-        reject()
-      }
-      count++
-    }, 500);
-  })
+  return 
 }
 
 async function withLoader(loaderParent, fn) {

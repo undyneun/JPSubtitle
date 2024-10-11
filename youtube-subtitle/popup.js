@@ -1,6 +1,6 @@
 var hasFile = false
-var hasTranslate = false
 var apiKey;
+var serverIP = env.serverIP;
 
 const getTab = () => {
   return new Promise((resolve, reject) => {
@@ -17,8 +17,9 @@ const getTab = () => {
 document.addEventListener('DOMContentLoaded', async () => {
   // 保存已輸入的 apiKey 到輸入框
   const apiKeyInput = document.getElementById('apiKey');
-  apiKey = localStorage.getItem('openaiApiKey');
   apiKeyInput.value = localStorage.getItem('openaiApiKey');
+  apiKey = apiKeyInput.value;
+  
   apiKeyInput.addEventListener('input', () => { 
     localStorage.setItem('openaiApiKey', apiKeyInput.value) 
     apiKey = localStorage.getItem('openaiApiKey');
@@ -27,10 +28,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 如果不是 YouTube 影片頁面，顯示提示訊息並隱藏按鈕
   const tab = await getTab()
   if (tab.url.includes("youtube.com/watch")) { return }
-  const splitButton = document.getElementById('splitButton');
-  const notEffective = document.getElementById('notEffective');
-  splitButton.style.display = 'none';
-  notEffective.style.display = 'block';
+  document.getElementById('splitButton').style.display = 'none';
+  document.getElementById('notEffective').style.display = 'block';
 });
 
 
@@ -39,16 +38,13 @@ document.getElementById('splitButton').addEventListener('click', async () => {
   chrome.scripting.insertCSS({
     target: { tabId: tab.id }, files: ['styles.css']
   }, () => {
-    chrome.scripting.executeScript({
+    chrome.scripting.executeScript({ 
       target: { tabId: tab.id },
-      args: [apiKey, hasFile, hasTranslate],
-      function: (apiKey, hasFile, hasTranslate) => { applyCustomLayout(apiKey, hasFile, hasTranslate) }
+      args: [serverIP, apiKey, hasFile],
+      function: (serverIP, apiKey, hasFile) => applyCustomLayout(serverIP, apiKey, hasFile)
     });
   });
-
-  setTimeout(()=>{ 
-    hasFile = false; hasTranslate = false; 
-  }, 1000)
+  setTimeout(()=>{ hasFile = false }, 1000)
 });
 
 
@@ -62,27 +58,15 @@ document.getElementById('submit').addEventListener('click', async () => {
   if (file) {
     hasFile = true;
     try {
-      const response = await fetch('http://localhost:8080/parse', { method: 'POST', body: formData })
+      const response = await fetch(`${serverIP}/parse`, { method: 'POST', body: formData })
       const json = await response.json()
       sendData(json, "subtitleJson")
       const tab = await getTab()
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
+      chrome.scripting.executeScript({ target: { tabId: tab.id },
         function: () => fillSubtitleContainer()
       });
     } catch (error) {
       console.error('上傳文件時出錯:', error)
-    }
-
-    if (apiKey) {
-      hasTranslate = true;
-      try {
-        const response = await fetch('http://localhost:8080/translate', { method: 'POST', body: formData })
-        const text = await response.text()
-        sendData(text, "translatedText")
-      } catch (error) {
-        console.error('上傳文件時出錯:', error)
-      }
     }
   }
 })

@@ -1,3 +1,5 @@
-./Dockerfile
-./.dockerignore
-./dockercompose.yml
+Dockerfile
+cache
+.dockerignore
+dockercompose.yml
+mecab-ipadic-neologd

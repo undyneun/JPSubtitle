@@ -1,10 +1,10 @@
 import re
-import os
 from typing import *
 import MeCab
 
-dic_path = os.environ.get('MECAB_DICDIR')
-tagger = MeCab.Tagger(f'-d {dic_path}')
+dic_path = r"/app/mecab-ipadic-neologd"
+tagger = MeCab.Tagger(f'-r /dev/null -d {dic_path}')
+
 jp = str.maketrans({
     "ア":"あ", "イ":"い", "ウ":"う", "エ":"え", "オ":"お",
     "カ":"か", "キ":"き", "ク":"く", "ケ":"け", "コ":"こ",
