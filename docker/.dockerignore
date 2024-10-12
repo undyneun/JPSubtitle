@@ -1,6 +1,3 @@
-# 容器只包 pyModule, script.py
-cache
-mecab-ipadic-neologd
 .dockerignore
 cloudbuild.yaml
 docker-compose.yml

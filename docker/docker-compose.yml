@@ -1,9 +1,0 @@
-services:
-  backend:
-    image: mecab:latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./cache:/app/cache
-      - ./mecab-ipadic-neologd:/app/mecab-ipadic-neologd
-      - ../test_api.py:/app/test_api.py

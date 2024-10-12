@@ -2,12 +2,12 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'mecab:latest', './docker']
 
-  - name: 'docker/compose:1.29.2'
-    args: ['-f', './docker/docker-compose.yml', 'up', '-d'] 
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['run', '-d', '--name', 'mecab_container', '-p', '8080:8080', 'mecab:latest']
 
-  - name: 'docker/compose:1.29.2'
-    args: ['-f', './docker/docker-compose.yml', 'exec', '-T', 'backend', 'pytest', '/app/test_api.py']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['exec', '-T', 'mecab_container', 'pytest', '/app/test_api.py']
 
-timeout: 1200s 
+timeout: 1200s
 options:
   logging: CLOUD_LOGGING_ONLY
