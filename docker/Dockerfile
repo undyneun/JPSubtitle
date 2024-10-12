@@ -34,7 +34,7 @@ RUN pip install mecab-python3 flask flask-cors openai selenium webdriver-manager
 RUN ln -sf /etc/mecabrc /usr/local/etc/mecabrc
 
 WORKDIR /app
-COPY . /app
-COPY ./docker/init.sh /app/init.sh
+COPY ./docker /app
+# COPY ./docker/init.sh /app/init.sh
 RUN chmod +x /app/init.sh
 ENTRYPOINT ["/app/init.sh"]
