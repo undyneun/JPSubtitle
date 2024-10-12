@@ -35,4 +35,6 @@ RUN ln -sf /etc/mecabrc /usr/local/etc/mecabrc
 
 WORKDIR /app
 COPY . /app
-ENTRYPOINT ["python", "script.py"]
+COPY init.sh /app/init.sh
+RUN chmod +x /app/init.sh
+ENTRYPOINT ["/app/init.sh"]

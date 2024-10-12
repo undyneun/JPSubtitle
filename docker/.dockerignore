@@ -1,5 +1,7 @@
-Dockerfile
+# 容器只包 pyModule, script.py
 cache
-.dockerignore
-dockercompose.yml
 mecab-ipadic-neologd
+.dockerignore
+cloudbuild.yaml
+docker-compose.yml
+Dockerfile
