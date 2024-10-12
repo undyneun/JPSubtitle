@@ -9,3 +9,5 @@ steps:
     args: ['-f', './docker/docker-compose.yml', 'exec', 'backend', 'pytest', '/app/test_api.py'] 
 
 timeout: 1200s 
+options:
+  logging: NONE  # 不儲存日誌
