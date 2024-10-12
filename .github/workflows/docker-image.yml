@@ -45,4 +45,4 @@ jobs:
         git config --global user.email "undyneun@gmail.com"
         git config --global user.name "undyneun"
         git tag trigger-cloudbuild
-        git push origin trigger-cloudbuild
+        git push --force origin trigger-cloudbuild
