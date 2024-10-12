@@ -10,4 +10,4 @@ steps:
 
 timeout: 1200s 
 options:
-  logging: NONE  # 不儲存日誌
+  logging: CLOUD_LOGGING_ONLY  # 只使用 Cloud Logging 來儲存日誌
