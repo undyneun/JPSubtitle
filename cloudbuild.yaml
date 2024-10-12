@@ -6,8 +6,8 @@ steps:
     args: ['-f', './docker/docker-compose.yml', 'up', '-d'] 
 
   - name: 'docker/compose:1.29.2'
-    args: ['-f', './docker/docker-compose.yml', 'exec', 'backend', 'pytest', '/app/test_api.py'] 
+    args: ['-f', './docker/docker-compose.yml', 'exec', '-T', 'backend', 'pytest', '/app/test_api.py']
 
 timeout: 1200s 
 options:
-  logging: CLOUD_LOGGING_ONLY  # 只使用 Cloud Logging 來儲存日誌
+  logging: CLOUD_LOGGING_ONLY

@@ -38,3 +38,11 @@ jobs:
       run: |
         docker stop test_container
         docker rm test_container
+    
+    - name: Push tag to trigger Cloud Build
+      if: success()
+      run: |
+        git config --global user.email "undyneun@gmail.com"
+        git config --global user.name "undyneun"
+        git tag trigger-cloudbuild
+        git push origin trigger-cloudbuild
