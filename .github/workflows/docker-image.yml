@@ -18,7 +18,12 @@ jobs:
 
     - name: Run Docker container
       run: |
-        docker run -d -p 8080:8080 --name test_container mecab:latest
+        docker run -d -p 8080:8080 \
+          --name test_container \
+          -v ./docker/cache:/app/cache \
+          -v ./docker/mecab-ipadic-neologd:/app/mecab-ipadic-neologd \
+          -v ./test_api.py:/app/test_api.py \
+          mecab:latest
         sleep 10 # 等待容器啟動
 
     - name: Check Docker container logs
