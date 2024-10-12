@@ -100,7 +100,7 @@ def load_cache():
         with open(CACHE_FILE, 'r', encoding='utf-8') as f:
             query_cache = json.load(f)
     except IOError:
-        raise IOError("無此檔案")
+        raise IOError(f"找不到 {CACHE_FILE}")
     except Exception as e:
         raise e
     
