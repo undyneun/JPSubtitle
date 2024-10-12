@@ -24,10 +24,10 @@ jobs:
     - name: Check Docker container logs
       run: docker logs test_container
 
-    # - name: Run API tests
-    #   run: |
-    #     pip install pytest requests
-    #     pytest test_api.py
+    - name: Run API tests
+      run: |
+        pip install pytest requests
+        pytest test_api.py
     
     - name: Stop and remove container
       run: |
