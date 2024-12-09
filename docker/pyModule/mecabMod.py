@@ -24,6 +24,9 @@ jp = str.maketrans({
     "ィ":"ぃ", "ゥ":"ぅ", "ェ":"ぇ", "ォ":"ぉ", "ッ":"っ"})
 
 def getKanjiIndex(japanese):
+    '''
+        傳入日文片語，回傳漢字的索引
+    '''
     kanji_index = ""
     kanji_pattern = re.compile(r'[\u4E00-\u9FAF\u3005]')
     for i, char in enumerate(japanese):
@@ -34,6 +37,9 @@ def getKanjiIndex(japanese):
     return kanji_index
 
 def getKanjiReading(original, reading, kanji_index):
+    '''
+        傳入日文片語、片語讀音、漢字索引，回傳漢字讀音
+    '''
     if kanji_index == "-1": 
         return "none"
 
@@ -42,7 +48,7 @@ def getKanjiReading(original, reading, kanji_index):
     j = len(reading) - 1
     for i in range(len(original)-1, -1, -1):
         if str(i) not in kanji_index:
-            while reading[j].translate(jp) != original[i] and j >= 0:
+            while reading[j].translate(jp) != original[i].translate(jp) and j >= 0:
                 j -= 1
             notKanjiIndex[j] = "1"
     if '1' not in notKanjiIndex: 
@@ -65,6 +71,9 @@ def getKanjiReading(original, reading, kanji_index):
     return result
 
 def getAfter(parsed):
+    '''
+        輸入 MeCab 處理的結果
+    '''
     lines = parsed.split("\n")
     for i, line in enumerate(lines[:-1]):
         count = line.count(',')
@@ -77,11 +86,12 @@ def getAfter(parsed):
     return after
 
 def preprocess(text):
-    # 使用正則表達式一次性匹配所有需要的部分
+    '''
+        輸入一段文字，非日文部分用 "/* 和 */" 包住特別處理
+    '''
     pattern = re.compile(r'([^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+)')
     matches = pattern.finditer(text.strip())
     
-    # 將匹配的部分用 "/*...*/" 包裹
     for match in reversed(list(matches)):
         s, e = match.span()
         text = text[:s] + "/*" + text[s:e] + "*/" + text[e:]
@@ -96,6 +106,9 @@ def preprocess(text):
     return text, indices
 
 def getCompleteJp(dic_path, text):
+    '''
+        輸入日文，回傳 tokens
+    '''
     if text == "":
         return []
 
@@ -120,7 +133,7 @@ def getCompleteJp(dic_path, text):
 def getResult(line, dic_path=dic_path):
     # line 已經 line.decode('utf-8').strip() 了
     tokens = []
-    text, indices = preprocess(line) # 日文以外用/**/包住額外處理
+    text, indices = preprocess(line)
     jp_s = 0
     for (s, e) in indices:
         jp = text[jp_s:s]

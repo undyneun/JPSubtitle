@@ -15,7 +15,7 @@ RUN curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key a
     apt-get update && apt-get install -y --no-install-recommends \
     google-chrome-stable && rm -rf /var/lib/apt/lists/*
 
-RUN pip install mecab-python3 flask flask-cors openai selenium webdriver-manager pytubefix pytest
+RUN pip install mecab-python3 flask flask-cors openai selenium webdriver-manager pytubefix
 
 # 確保 mecabrc 在
 RUN ln -sf /etc/mecabrc /usr/local/etc/mecabrc

@@ -9,7 +9,9 @@ var originalText = "", CrawlerJson = {}, subtitleData = [], timestampData = [];
 var isHalfFull, isResizing = false, isDragging = false;
 var openaiApiKey;
 var moviePlayer, moviePlayerParent, ytpSizeBtn;
-var offsety, startX, startLeft;
+var offsety, startX, startLeft;4
+var curIdx;
+let nowSubtitle, intervalCC;
 
 // 按鍵
 const handle = {
@@ -35,15 +37,13 @@ const handle = {
       try {
         const jpJson = await getTranscription(serverIP, openaiApiKey, window.location.href)
         console.log(jpJson);
-        if (jpJson[0]["line"] === "error: error") { 
-          window.subtitleJson = [[{"origin": "忙碌中，請稍後再試","normalForm": "","kanji_index": "-1","kanji_reading": "none"}]]
-        }
-        else {
+        if (jpJson[0]["line"] !== "error: error") { 
           const jpString = jpJson.map(dict => dict["line"]).join("\n")
           jpJson.forEach(dict => timestampData.push({ start: dict["start"], end: dict["end"] }))
           console.log(timestampData);
           window.subtitleJson = await getParse(serverIP, jpString)
         }
+        else { window.subtitleJson = [[{"origin": "忙碌中，請稍後再試","normalForm": "","kanji_index": "-1","kanji_reading": "none"}]] }
         fillSubtitleContainer();
       } catch (error) {
         console.error(error)
@@ -55,6 +55,7 @@ const handle = {
     timestampData = [];
     subtitleData = [];
     originalText = "";
+    window.translatedText = "";
     subtitleContainer.replaceChildren()
     createWhisperBtn()
   },
@@ -67,29 +68,71 @@ const handle = {
     const textDiv = e.currentTarget.querySelector(".JPsubtitle-text")
     const chs = document.querySelectorAll('.JPsubtitle-chinese-subtitle');
     const origs = document.querySelectorAll('.JPsubtitle-original-subtitle');
+
     if (textDiv.innerText === "中") {
-      chs.forEach(ch => { ch.style.fontSize = "15px";  ch.style.color = "rgb(156, 156, 156)" })
+      chs.forEach(ch => { ch.style.fontSize = "15px";  ch.style.color = "rgb(156, 156, 156)"; ch.parentElement.style.backgroundColor = "#1a1a1a"})
+      if (subtitleContainer.children[curIdx]) {subtitleContainer.children[curIdx].style.backgroundColor = "rgb(63, 63, 63)"}
       origs.forEach(orig => orig.style.display = "")
       textDiv.innerText = "日中"
     }
     else if (textDiv.innerText === "日中") {
-      chs.forEach(ch => ch.style.display = "none")
+      chs.forEach(ch => {ch.style.display = "none"; if (ch.parentElement.style.backgroundColor !== "rgb(63, 63, 63)") ch.parentElement.style.backgroundColor = "#1a1a1a"})
       textDiv.innerText = "日"
     }
     else {
-      chs.forEach(ch => { ch.style.display = ""; ch.style.fontSize = "18px"; ch.style.color = "rgba(255, 255, 255, 0.71)" })
+      chs.forEach(ch => { ch.style.display = ""; ch.style.fontSize = "18px"; ch.style.color = "rgba(255, 255, 255, 0.71)"; if (!ch.hasChildNodes()) ch.parentElement.style.backgroundColor = "transparent" })
       origs.forEach(orig => orig.style.display = "none")
       textDiv.innerText = "中"
     }
   },
-  async clickTranslateBtn() {
-    if (subtitleData.length === 0) {return}
-    try {
-      window.translatedText = await getTranslate(serverIP, openaiApiKey, originalText)
-      fillSubtitleContainer();
-    } catch (error) {
-      console.error(error)
-    }   
+  clickTranslateBtn() {
+    if (subtitleData.length === 0) return
+    subtitleContainer.replaceChildren()
+    withLoader(subtitleContainer, async () => {
+      try {
+        window.translatedText = await getTranslate(serverIP, openaiApiKey, originalText)
+        fillSubtitleContainer();
+      } catch (error) {
+        window.subtitleJson = [[{
+          "origin": "翻譯時發生錯誤，請再試一次",
+          "normalForm": "",
+          "kanji_index": "-1",
+          "kanji_reading": ""
+        }]]
+        console.log(error);
+      }   
+    })
+  },
+  clickcc(e) {
+    if (!intervalCC) {
+      e.currentTarget.style.color = "white";
+      intervalCC = setInterval(() => {
+        cc.style.display = cc.hasChildNodes() ? 'block' : 'none';
+        moviePlayer = document.querySelector('#movie_player');
+        const video = moviePlayer.querySelector("video");
+        if (!video) return;
+      
+        const curSec = video.currentTime;
+        curIdx = timestampData.findIndex(({ start, end }) => curSec >= start && curSec <= end);
+        const nextSubtitle = subtitleContainer.children[curIdx];
+        if (nextSubtitle && nextSubtitle.isEqualNode(nowSubtitle)) return; // 辨別內容而非指標
+      
+        nowSubtitle = nextSubtitle;
+        if (!nowSubtitle) return;
+      
+        cc.replaceChildren();
+        Array.from(subtitleContainer.children).forEach(child => child.style.backgroundColor = "rgb(26, 26, 26)");
+        cc.append(nowSubtitle.cloneNode(true));
+        subtitleContainer.scrollTop = nowSubtitle.offsetTop - subtitleContainer.offsetTop - (subtitleContainer.clientHeight / 2) + (nowSubtitle.clientHeight / 2);
+        nowSubtitle.style.backgroundColor = "rgb(63, 63, 63)";
+      }, 100);
+    } else {
+      e.currentTarget.style.color = "gray";
+      clearInterval(intervalCC);
+      if (subtitleContainer.children[curIdx]) {subtitleContainer.children[curIdx].style.backgroundColor = "#1a1a1a"}
+      intervalCC = null;
+      cc.style.display = 'none';
+    }
   },
   resizeMousemove(e) {
     if (!isResizing) return;
@@ -119,9 +162,9 @@ const handle = {
   windowResize() {
     const containerRect = subtitleCombineContainer.getBoundingClientRect();
     const fnDivRect = functionContainer.getBoundingClientRect();
-    resizer.style.top = `${resizerY - 5}px`;
-    subtitleContainer.style.height = `${resizerY - 5 - (fnDivRect.height)*2 + 15}px`;
-    subtitleSearchContainer.style.height = `${containerRect.height - resizerY - fnDivRect.height + 5}px`;
+    resizer.style.top = `${resizerY}px`;
+    subtitleContainer.style.height = `${resizerY - fnDivRect.height - 20}px`;
+    subtitleSearchContainer.style.height = `${containerRect.height - resizerY - fnDivRect.height + 3}px`;
   },
   ccMousemove(e) {
     if (!isDragging) { return; }
@@ -134,10 +177,10 @@ const handle = {
   },
   ccMousedown(e) {
     isDragging = true;
+    cc.style.cursor = 'grabbing';
     startX = e.clientX;
     startLeft = cc.offsetLeft;
     offsety = e.clientY - cc.getBoundingClientRect().top;
-    cc.style.cursor = 'grabbing';
   }
 }
 
@@ -180,37 +223,6 @@ cc.addEventListener('mousedown', handle.ccMousedown);
 document.addEventListener('mouseup', handle.ccMouseup);
 document.addEventListener('mousemove', handle.ccMousemove);
 
-(() => {
-  let nowSubtitle;
-  setInterval(() => {
-    cc.style.display = cc.hasChildNodes() ? 'block' : 'none';
-    moviePlayer = document.querySelector('#movie_player');
-    const video = moviePlayer.querySelector("video");
-    if (!video) return;
-
-    const curSec = video.currentTime;
-    const curIdx = timestampData.findIndex(({ start, end }) => curSec >= start && curSec <= end);
-    const nextSubtitle = subtitleContainer.children[curIdx];
-    if (nextSubtitle && nextSubtitle.isEqualNode(nowSubtitle)) return; // 辨別內容而非指標
-
-    nowSubtitle = nextSubtitle;
-    if (!nowSubtitle) return;
-
-    cc.replaceChildren();
-    Array.from(subtitleContainer.children).forEach(child => child.style.backgroundColor = "");
-    cc.append(nowSubtitle.cloneNode(true));
-    subtitleContainer.scrollTop = nowSubtitle.offsetTop - subtitleContainer.offsetTop - (subtitleContainer.clientHeight / 2) + (nowSubtitle.clientHeight / 2);
-    nowSubtitle.style.backgroundColor = "rgba(100, 100, 0, 0.3)";
-  }, 100);
-})()
-  
-
-// 影片
-setTimeout(() => {
-  moviePlayerParent = moviePlayer.parentNode
-  ytpSizeBtn = document.querySelector('.ytp-size-button');
-}, 3000)
-
 // resizer
 resizer.addEventListener('mousedown', handle.resizeMousedown);
 window.onresize = handle.windowResize
@@ -222,12 +234,16 @@ createWhisperBtn()
 // 主函數
 async function applyCustomLayout(IP, apiKey, hasFile) {
   if (layoutContainer.style.zIndex === 10000) return;
+  moviePlayer = document.querySelector('#movie_player');
+  moviePlayerParent = moviePlayer.parentNode
+  ytpSizeBtn = document.querySelector('.ytp-size-button');
   serverIP = IP;
   openaiApiKey = apiKey;
   document.addEventListener('keydown', handle.dictChange, true);
   document.addEventListener('keydown', handle.pressEsc);
   showContainers();
   handle.windowResize();
+  handle.clickcc({currentTarget: functionContainer.querySelector('.cc')});
 
   if (hasFile) {
     await withLoader(subtitleContainer, async () => {
@@ -258,6 +274,7 @@ function showContainers() {
   document.documentElement.style.overflow = 'hidden';
   layoutContainer.style.zIndex = 10000
   layoutContainer.style.display = "flex"
+  functionContainer.style.removeProperty('display');
 }
 
 function hideContainers() {
@@ -267,13 +284,12 @@ function hideContainers() {
   document.documentElement.style.overflow = 'auto';
   layoutContainer.style.zIndex = -1
   layoutContainer.style.display = "none"
+  functionContainer.style.display = "none"
 }
 
 // 主要功能
 function getOriginalText() {
-  return window.subtitleJson.map(sentenceArray => 
-    sentenceArray.map(tokenDict => tokenDict.origin).join('')
-  ).join('\n');
+  return window.subtitleJson.map(s => s.map(d => d.origin).join('')).join('\n');
 }
 
 function getSubtitleData() {
@@ -285,7 +301,13 @@ function getSubtitleData() {
         span.addEventListener('mouseover', () => span.style.backgroundColor = 'rgba(100, 100, 100, 0.5)');
         span.addEventListener('mouseout', () => span.style.backgroundColor = '');
         span.addEventListener('click', () => { clickToken(origin, normalForm); });
-        span.classList.add(normalForm)
+        if (normalForm.indexOf(' ') >= 0) { 
+          let n = normalForm.replace(' ', '-')
+          span.classList.add(n)
+        } else { 
+          span.classList.add(normalForm) 
+        }
+        
       }
       return span;
     });
@@ -306,8 +328,9 @@ function fillSubtitleContainer() {
 
   let translatedTextArray = [];
   if (window.translatedText) {
-    translatedTextArray = window.translatedText.split('\n');
+    translatedTextArray = window.translatedText.split('_');
     console.log(window.translatedText);
+    console.log(translatedTextArray);
   }
 
   originalText = getOriginalText();
@@ -319,13 +342,12 @@ function fillSubtitleContainer() {
     const subtitleWrapper = getDiv('', 'JPsubtitle-subtitle-wrapper');
     const orgSubtitleDiv = getDiv('', 'JPsubtitle-original-subtitle');
     const zhSubtitleDiv = getDiv('', 'JPsubtitle-chinese-subtitle');
-    const zhSpan = document.createElement("span");
-
     subtitleWrapper.append(orgSubtitleDiv, zhSubtitleDiv);
     subtitleContainer.appendChild(subtitleWrapper);
 
     subtitleData[i].forEach(token => orgSubtitleDiv.appendChild(token));
     if (window.translatedText) {
+      const zhSpan = document.createElement("span");
       zhSpan.innerText = translatedTextArray[i] || "";
       zhSubtitleDiv.appendChild(zhSpan);
     }
@@ -448,7 +470,8 @@ function createFnBtns() {
     { name: "reset", handleFn: handle.clickResetBtn, svgPath: "icons/reset.svg", tipText: "清除字幕"},
     { name: "translate", handleFn: handle.clickTranslateBtn, svgPath: "icons/translate.svg", tipText: "翻譯字幕"},
     { name: "close", handleFn: handle.clickCloseBtn, svgPath: "icons/close.svg", tipText: "關閉"},
-    { name: "jaOrZh", handleFn: handle.clickjaOrZhBtn, text: "日中"}
+    { name: "jaOrZh", handleFn: handle.clickjaOrZhBtn, text: "日中"},
+    { name: "cc", handleFn: handle.clickcc, text: "懸浮\n字幕"},
   ]
   btnArgs.forEach(({name, handleFn, svgPath, text, tipText}) => {
     const btn = getFnBtn(name, handleFn, svgPath, text, tipText)
@@ -505,8 +528,7 @@ async function getTranslate(serverIP, apiKey, jpString) {
     const text = await response.text();
     return text
   } catch (error) {
-    console.error(error);
-    return "翻譯時發生錯誤，請再試一次"
+    throw new Error(`翻譯錯誤 ${error}`)
   }
 }
 
@@ -542,10 +564,10 @@ async function getParse(serverIP, jpString) {
   } catch (error) {
       console.error('Error fetching data:', error);
       return [[{
-        "origin": "",
-        "normalForm": "",
-        "kanji_index": "0",
-        "kanji_reading": "發生錯誤"
+        "origin": "發生錯誤",
+        "normalForm": "發生錯誤",
+        "kanji_index": "-1",
+        "kanji_reading": ""
       }]]
   }
 }

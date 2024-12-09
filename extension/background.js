@@ -15,5 +15,6 @@ const fn = (details) => {
   if (!hasLoaded && details.url.includes("youtube.com/watch")) {
     chrome.scripting.executeScript({ target: { tabId: details.tabId }, files: ['content.js'] });
     hasLoaded = true
+    console.log(details);
   }
 }
