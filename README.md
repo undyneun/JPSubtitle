@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/5ebb538e-834c-4f9d-954a-f3400d3b29cd
 ```bash
 .
 ├─.github
-│  └─workflows
+│  └─workflows                # Github Action 做 CI
 ├─docker                      
 │  ├─script.py                # flask 框架的伺服器
 │  ├─cache                    # Mazii 網站結果的緩存
