@@ -6,7 +6,7 @@
 
 https://github.com/user-attachments/assets/5ebb538e-834c-4f9d-954a-f3400d3b29cd
 
-按下擴充功能按鈕會跳出的視窗，除了用 whisper 轉錄影片字幕外還能自行上傳 (影片不知道為甚麼截不到)
+按下擴充功能按鈕會跳出的視窗，除了用 whisper 轉錄影片字幕外，想練習日文歌之類的話也能自行上傳歌詞 (影片不知道為甚麼截不到)
 
 ![1](https://github.com/user-attachments/assets/12045770-c7d0-47fc-98bc-9935da518c08)
 
